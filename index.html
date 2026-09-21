@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hermes Agent en WSL2 desde VS Code — Tutorial Técnico</title>
+<style>
+  :root{
+    --bg:#0a0e1a;
+    --card:#0f172a;
+    --border:#1e3a5f;
+    --accent:#00d4ff;
+    --green:#22c55e;
+    --amber:#f59e0b;
+    --red:#ef4444;
+    --purple:#a855f7;
+    --text:#e2e8f0;
+    --muted:#94a3b8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;line-height:1.6;min-height:100%}
+  a{color:var(--accent);text-decoration:none;word-break:break-word}
+  a:hover{text-decoration:underline}
+  code,pre{font-family:'Consolas','Monaco','Courier New',monospace}
+
+  /* PROGRESS BAR */
+  #progressBar{
+    position:fixed;top:0;left:0;height:3px;width:0%;
+    background:linear-gradient(90deg,var(--accent),var(--green),var(--purple));
+    z-index:9999;transition:width .1s linear;
+    box-shadow:0 0 10px rgba(0,212,255,.6);
+  }
+
+  /* NAVBAR */
+  nav{
+    position:sticky;top:0;z-index:1000;
+    background:rgba(10,14,26,.95);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--border);
+    padding:8px 0;
+  }
+  .nav-scroll{
+    display:flex;gap:6px;overflow-x:auto;padding:0 16px;
+    scrollbar-width:thin;scrollbar-color:var(--border) transparent;
+  }
+  .nav-scroll::-webkit-scrollbar{height:5px}
+  .nav-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+  .nav-btn{
+    background:transparent;border:1px solid var(--border);color:var(--muted);
+    padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px;
+    font-family:inherit;white-space:nowrap;transition:.2s;flex-shrink:0;
+  }
+  .nav-btn:hover{color:var(--text);border-color:var(--accent);background:rgba(0,212,255,.06)}
+  .nav-btn.active{color:var(--accent);border-color:var(--accent);background:rgba(0,212,255,.12);box-shadow:0 0 10px rgba(0,212,255,.25)}
+  .nav-credits{border-color:var(--purple);color:var(--purple)}
+  .nav-credits.active{background:rgba(168,85,247,.15);border-color:var(--purple);color:#d8b4fe;box-shadow:0 0 10px rgba(168,85,247,.3)}
+  .nav-sources{border-color:var(--amber);color:var(--amber)}
+  .nav-sources.active{background:rgba(245,158,11,.15);border-color:var(--amber);color:#fcd34d;box-shadow:0 0 10px rgba(245,158,11,.3)}
+
+  /* CONTAINER */
+  .container{max-width:1180px;margin:0 auto;padding:22px 18px 80px}
+  section{display:none;animation:fadeIn .4s ease}
+  section.active{display:block}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+  /* HEADINGS */
+  h1{font-size:clamp(1.6rem,3.4vw,2.5rem);font-weight:800;letter-spacing:-.02em;line-height:1.15;margin-bottom:12px}
+  h2{font-size:clamp(1.25rem,2.4vw,1.75rem);font-weight:700;margin:26px 0 14px;color:var(--accent);display:flex;align-items:center;gap:10px}
+  h3{font-size:1.1rem;font-weight:700;margin:16px 0 10px;color:var(--text)}
+  h4{font-size:.98rem;font-weight:600;margin:12px 0 8px;color:var(--accent)}
+  p{margin-bottom:12px}
+  ul,ol{margin:10px 0 14px 22px}
+  li{margin-bottom:6px}
+
+  /* CARDS */
+  .card{
+    background:var(--card);border:1px solid var(--border);border-radius:12px;
+    padding:18px 20px;margin-bottom:16px;position:relative;
+  }
+  .card-accent{border-left:4px solid var(--accent)}
+  .card-green{border-left:4px solid var(--green)}
+  .card-amber{border-left:4px solid var(--amber)}
+  .card-red{border-left:4px solid var(--red)}
+  .card-purple{border-left:4px solid var(--purple)}
+
+  /* BADGE */
+  .badge{
+    display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;
+    font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+    background:rgba(0,212,255,.12);color:var(--accent);border:1px solid rgba(0,212,255,.3);
+    margin-bottom:12px;
+  }
+  .chip{
+    display:inline-block;padding:3px 10px;border-radius:6px;font-size:11.5px;
+    background:rgba(0,212,255,.1);color:var(--accent);border:1px solid var(--border);
+    margin:2px 4px 2px 0;
+  }
+
+  /* CODE BLOCKS */
+  pre{
+    background:#060911;border:1px solid var(--border);border-radius:10px;
+    padding:14px 16px;overflow-x:auto;margin:10px 0;font-size:13.5px;
+    color:#7dd3fc;position:relative;
+  }
+  pre code{color:inherit}
+  code.inline{
+    background:#060911;padding:2px 7px;border-radius:5px;
+    color:#7dd3fc;font-size:13px;border:1px solid var(--border);
+  }
+  .copy-btn{
+    position:absolute;top:8px;right:8px;background:rgba(0,212,255,.1);
+    border:1px solid var(--border);color:var(--accent);padding:4px 9px;
+    border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit;
+    transition:.2s;
+  }
+  .copy-btn:hover{background:rgba(0,212,255,.2)}
+  .copy-btn.copied{background:rgba(34,197,94,.2);color:var(--green);border-color:var(--green)}
+
+  /* CALLOUTS */
+  .callout{
+    border-radius:10px;padding:14px 18px;margin:14px 0;
+    border-left:4px solid;background:rgba(15,23,42,.7);
+  }
+  .callout-title{font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+  .callout.info{border-color:var(--accent)}
+  .callout.info .callout-title{color:var(--accent)}
+  .callout.example{border-color:var(--green)}
+  .callout.example .callout-title{color:var(--green)}
+  .callout.warn{border-color:var(--amber)}
+  .callout.warn .callout-title{color:var(--amber)}
+  .callout.error{border-color:var(--red)}
+  .callout.error .callout-title{color:var(--red)}
+
+  /* STEP */
+  .step{
+    background:var(--card);border:1px solid var(--border);border-radius:12px;
+    padding:20px;margin-bottom:18px;position:relative;
+  }
+  .step-num{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:34px;height:34px;border-radius:10px;
+    background:linear-gradient(135deg,rgba(0,212,255,.2),rgba(168,85,247,.2));
+    border:1px solid var(--accent);color:var(--accent);
+    font-weight:800;font-size:14px;margin-right:10px;
+  }
+  .step-title{display:flex;align-items:center;margin-bottom:14px}
+  .step-title h3{margin:0;font-size:1.05rem;color:var(--text)}
+
+  /* GRID */
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+  .grid-2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+
+  /* METRICS */
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:18px 0}
+  .metric{
+    background:var(--card);border:1px solid var(--border);border-radius:10px;
+    padding:14px;text-align:center;
+  }
+  .metric-value{font-size:1.5rem;font-weight:800;color:var(--accent);display:block;line-height:1.1}
+  .metric-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:4px}
+
+  /* QUOTE */
+  .quote{
+    border-left:3px solid var(--purple);padding:12px 18px;
+    background:rgba(168,85,247,.06);border-radius:0 10px 10px 0;
+    font-style:italic;color:#cbd5e1;margin:18px 0;
+  }
+
+  /* TABLE */
+  .tbl-wrap{overflow-x:auto;margin:14px 0;border-radius:10px;border:1px solid var(--border)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:420px}
+  th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border)}
+  th{background:rgba(0,212,255,.08);color:var(--accent);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:rgba(0,212,255,.03)}
+
+  /* SVG WRAPPER */
+  .svg-wrap{
+    width:100%;border-radius:14px;overflow:hidden;
+    border:1px solid var(--border);background:#070b14;
+    margin:0 0 22px;box-shadow:0 0 40px rgba(0,212,255,.08);
+  }
+  .svg-wrap svg{display:block;width:100%;height:auto}
+
+  /* DIAGRAM */
+  .diagram{
+    background:#060911;border:1px solid var(--border);border-radius:10px;
+    padding:18px;font-family:'Consolas',monospace;font-size:13px;
+    color:#7dd3fc;overflow-x:auto;white-space:pre;line-height:1.7;
+  }
+
+  /* ACCORDION */
+  details{
+    background:var(--card);border:1px solid var(--border);border-radius:10px;
+    margin-bottom:10px;overflow:hidden;
+  }
+  summary{
+    padding:14px 18px;cursor:pointer;font-weight:600;color:var(--accent);
+    list-style:none;display:flex;justify-content:space-between;align-items:center;
+    transition:.2s;font-size:14.5px;
+  }
+  summary::-webkit-details-marker{display:none}
+  summary:hover{background:rgba(0,212,255,.05)}
+  summary::after{content:"▸";transition:transform .2s;color:var(--accent)}
+  details[open] summary::after{transform:rotate(90deg)}
+  details[open] summary{border-bottom:1px solid var(--border)}
+  .details-body{padding:16px 18px}
+
+  /* BACK TO TOP */
+  #backTop{
+    position:fixed;bottom:22px;right:22px;width:46px;height:46px;
+    border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));
+    border:none;color:#060911;font-size:20px;font-weight:800;cursor:pointer;
+    display:none;z-index:900;box-shadow:0 6px 20px rgba(0,212,255,.4);
+    transition:.2s;
+  }
+  #backTop:hover{transform:translateY(-3px);box-shadow:0 8px 26px rgba(0,212,255,.6)}
+  #backTop.show{display:flex;align-items:center;justify-content:center}
+
+  /* FOOTER */
+  footer{
+    border-top:1px solid var(--border);padding:24px 18px;text-align:center;
+    color:var(--muted);font-size:13px;margin-top:40px;
+  }
+  footer p{margin:5px 0}
+  .footer-credits{color:var(--accent);font-weight:600}
+  .footer-fiat{color:var(--purple);font-style:italic;margin-top:10px}
+
+  /* SOURCES */
+  .source-item{
+    background:var(--card);border:1px solid var(--border);border-left:4px solid var(--amber);
+    border-radius:10px;padding:16px 18px;margin-bottom:12px;
+  }
+  .source-item h4{margin:0 0 6px;color:var(--amber)}
+  .source-item a{font-size:12.5px;color:var(--accent);word-break:break-all}
+
+  /* CREDITS */
+  .credits-box{
+    background:var(--card);border:1px solid var(--border);border-radius:14px;
+    padding:26px;text-align:center;max-width:640px;margin:0 auto;
+  }
+  .credits-box .name{font-size:1.6rem;font-weight:800;color:var(--accent);margin:12px 0 4px}
+  .credits-box .role{color:var(--muted);font-size:14px;margin-bottom:16px}
+  .credits-meta{display:flex;justify-content:center;gap:24px;flex-wrap:wrap;margin:16px 0}
+  .credits-meta div{text-align:center}
+  .credits-meta .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .credits-meta .v{font-size:15px;color:var(--text);font-weight:600}
+
+  /* RESPONSIVE */
+  @media (max-width:640px){
+    .container{padding:16px 12px 70px}
+    .card,.step{padding:14px 14px}
+    .nav-btn{padding:6px 11px;font-size:12px}
+    pre{font-size:12px;padding:11px 12px}
+    .metrics{grid-template-columns:repeat(2,1fr)}
+    h2{font-size:1.15rem}
+    .credits-box{padding:18px}
+    .credits-box .name{font-size:1.3rem}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001s !important;transition-duration:.001s !important}
+  }
+</style>
+</head>
+<body>
+
+<div id="progressBar"></div>
+
+<nav>
+  <div class="nav-scroll" id="navScroll">
+    <button class="nav-btn active" data-target="home">🏠 Inicio</button>
+    <button class="nav-btn" data-target="verificacion">🔍 Verificación</button>
+    <button class="nav-btn" data-target="conexion">🔗 VS Code + WSL</button>
+    <button class="nav-btn" data-target="config">⚙️ Config ACP</button>
+    <button class="nav-btn" data-target="pruebas">🧪 Pruebas</button>
+    <button class="nav-btn" data-target="arquitectura">🏗️ Arquitectura</button>
+    <button class="nav-btn" data-target="advertencias">⛔ Advertencias</button>
+    <button class="nav-btn" data-target="troubleshooting">🛠️ Problemas</button>
+    <button class="nav-btn nav-sources" data-target="fuentes">📚 Fuentes</button>
+    <button class="nav-btn nav-credits" data-target="creditos">✨ Créditos</button>
+  </div>
+</nav>
+
+<div class="container">
+
+<!-- ============ HOME ============ -->
+<section id="home" class="active">
+  <div class="svg-wrap" style="margin-top:4px">
+    <!-- SVG ANIMADO COMPARTIDO (HOME + CRÉDITOS) -->
+    <svg id="heroSvg" viewBox="0 0 800 450" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#070b14">
+            <animate attributeName="stop-color" values="#070b14;#0a1530;#070b14" dur="8s" repeatCount="indefinite"/>
+          </stop>
+          <stop offset="100%" stop-color="#0a0e1a">
+            <animate attributeName="stop-color" values="#0a0e1a;#130a2a;#0a0e1a" dur="9s" repeatCount="indefinite"/>
+          </stop>
+        </linearGradient>
+
+        <pattern id="gridP" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e3a5f" stroke-width="0.6">
+            <animate attributeName="stroke-opacity" values="0.12;0.55;0.12" dur="4.5s" repeatCount="indefinite"/>
+          </path>
+        </pattern>
+
+        <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="3.2" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glowStrong" x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="6" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+
+        <radialGradient id="haloBlue">
+          <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.55"/>
+          <stop offset="100%" stop-color="#00d4ff" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="haloGreen">
+          <stop offset="0%" stop-color="#22c55e" stop-opacity="0.5"/>
+          <stop offset="100%" stop-color="#22c55e" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="haloPurple">
+          <stop offset="0%" stop-color="#a855f7" stop-opacity="0.5"/>
+          <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="haloAmber">
+          <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.5"/>
+          <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+        </radialGradient>
+
+        <!-- Paths narrativos: flujo vertical Windows -> VS Code -> WSL2 -> Hermes -->
+        <path id="flow1" d="M 400 92 L 400 152" fill="none"/>
+        <path id="flow2" d="M 400 208 L 400 262" fill="none"/>
+        <path id="flow3" d="M 400 318 L 400 372" fill="none"/>
+        <!-- Path lateral de ACP -->
+        <path id="acpPath" d="M 540 180 Q 640 180 640 240 Q 640 290 540 290" fill="none"/>
+      </defs>
+
+      <!-- FONDO -->
+      <rect width="800" height="450" fill="url(#bgGrad)"/>
+      <rect width="800" height="450" fill="url(#gridP)"/>
+
+      <!-- ANILLOS ORBITALES CONCÉNTRICOS -->
+      <g transform="translate(400,225)" opacity="0.55">
+        <circle r="200" fill="none" stroke="#00d4ff" stroke-width="0.8" stroke-dasharray="6 14" opacity="0.35">
+          <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="42s" repeatCount="indefinite"/>
+        </circle>
+        <circle r="168" fill="none" stroke="#a855f7" stroke-width="0.7" stroke-dasharray="3 10" opacity="0.35">
+          <animateTransform attributeName="transform" type="rotate" from="360" to="0" dur="55s" repeatCount="indefinite"/>
+        </circle>
+        <circle r="138" fill="none" stroke="#22c55e" stroke-width="0.6" stroke-dasharray="2 8" opacity="0.3">
+          <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="70s" repeatCount="indefinite"/>
+        </circle>
+      </g>
+
+      <!-- TÍTULO ANIMADO -->
+      <text x="400" y="42" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="24" font-weight="800" letter-spacing="3" fill="#00d4ff" filter="url(#glow)">
+        HERMES AGENT · WSL2 · VS CODE
+        <animate attributeName="fill" values="#00d4ff;#a855f7;#22c55e;#f59e0b;#00d4ff" dur="12s" repeatCount="indefinite"/>
+      </text>
+      <text x="400" y="62" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" fill="#94a3b8" letter-spacing="4">
+        AGENT CLIENT PROTOCOL
+        <animate attributeName="opacity" values="0.5;1;0.5" dur="4s" repeatCount="indefinite"/>
+      </text>
+
+      <!-- INDICADOR LIVE -->
+      <g transform="translate(720,32)">
+        <circle r="5" fill="#ef4444">
+          <animate attributeName="r" values="4;6;4" dur="1.8s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="1;0.4;1" dur="1.8s" repeatCount="indefinite"/>
+        </circle>
+        <text x="12" y="4" font-family="Consolas,monospace" font-size="10" fill="#ef4444" font-weight="700">● LIVE</text>
+      </g>
+
+      <!-- ===== CAPA 1: WINDOWS 11 ===== -->
+      <g transform="translate(400,72)">
+        <ellipse rx="90" ry="34" fill="url(#haloBlue)">
+          <animate attributeName="rx" values="80;110;80" dur="5s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.4;0.8;0.4" dur="5s" repeatCount="indefinite"/>
+        </ellipse>
+        <g>
+          <animateTransform attributeName="transform" type="translate" values="0,0;0,-3;0,0" dur="3.1s" repeatCount="indefinite"/>
+          <rect x="-80" y="-20" width="160" height="40" rx="9" fill="#0f172a" stroke="#00d4ff" stroke-width="1.5" filter="url(#glow)"/>
+          <text x="-52" y="4" font-family="Segoe UI,sans-serif" font-size="13" font-weight="700" fill="#00d4ff">🪟 WINDOWS 11</text>
+          <circle cx="68" cy="0" r="3" fill="#22c55e">
+            <animate attributeName="opacity" values="1;0.2;1" dur="1.6s" repeatCount="indefinite"/>
+          </circle>
+        </g>
+      </g>
+
+      <!-- Flecha 1 -->
+      <g>
+        <line x1="400" y1="94" x2="400" y2="152" stroke="#00d4ff" stroke-width="2" stroke-dasharray="6 6" opacity="0.7" filter="url(#glow)">
+          <animate attributeName="stroke-dashoffset" from="0" to="-24" dur="1.5s" repeatCount="indefinite"/>
+        </line>
+        <polygon points="400,152 395,144 405,144" fill="#00d4ff"/>
+        <!-- paquetes viajando -->
+        <circle r="3.5" fill="#00d4ff" filter="url(#glow)">
+          <animateMotion dur="2s" repeatCount="indefinite"><mpath href="#flow1"/></animateMotion>
+        </circle>
+        <circle r="2.5" fill="#22c55e">
+          <animateMotion dur="2.5s" begin="0.6s" repeatCount="indefinite"><mpath href="#flow1"/></animateMotion>
+        </circle>
+        <circle r="2" fill="#a855f7">
+          <animateMotion dur="3s" begin="1.2s" repeatCount="indefinite"><mpath href="#flow1"/></animateMotion>
+        </circle>
+      </g>
+
+      <!-- ===== CAPA 2: VS CODE ===== -->
+      <g transform="translate(400,180)">
+        <ellipse rx="100" ry="36" fill="url(#haloGreen)">
+          <animate attributeName="rx" values="90;120;90" dur="4.2s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.35;0.75;0.35" dur="4.2s" repeatCount="indefinite"/>
+        </ellipse>
+        <g>
+          <animateTransform attributeName="transform" type="translate" values="0,0;0,-2;0,0" dur="2.5s" repeatCount="indefinite"/>
+          <rect x="-95" y="-22" width="190" height="44" rx="9" fill="#0f172a" stroke="#22c55e" stroke-width="1.5" filter="url(#glow)"/>
+          <text x="-68" y="4" font-family="Segoe UI,sans-serif" font-size="13" font-weight="700" fill="#22c55e">💻 VS CODE</text>
+          <text x="26" y="4" font-family="Consolas,monospace" font-size="10" fill="#94a3b8">+ ACP Client</text>
+          <circle cx="80" cy="0" r="3" fill="#00d4ff">
+            <animate attributeName="opacity" values="1;0.2;1" dur="2.1s" repeatCount="indefinite"/>
+          </circle>
+        </g>
+      </g>
+
+      <!-- Flecha 2 -->
+      <g>
+        <line x1="400" y1="208" x2="400" y2="262" stroke="#22c55e" stroke-width="2" stroke-dasharray="6 6" opacity="0.7" filter="url(#glow)">
+          <animate attributeName="stroke-dashoffset" from="0" to="-24" dur="1.8s" repeatCount="indefinite"/>
+        </line>
+        <polygon points="400,262 395,254 405,254" fill="#22c55e"/>
+        <circle r="3.5" fill="#22c55e" filter="url(#glow)">
+          <animateMotion dur="2.2s" repeatCount="indefinite"><mpath href="#flow2"/></animateMotion>
+        </circle>
+        <circle r="2.5" fill="#00d4ff">
+          <animateMotion dur="2.7s" begin="0.7s" repeatCount="indefinite"><mpath href="#flow2"/></animateMotion>
+        </circle>
+      </g>
+
+      <!-- ===== CAPA 3: WSL2 ===== -->
+      <g transform="translate(400,288)">
+        <ellipse rx="105" ry="38" fill="url(#haloPurple)">
+          <animate attributeName="rx" values="95;125;95" dur="5.5s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.4;0.8;0.4" dur="5.5s" repeatCount="indefinite"/>
+        </ellipse>
+        <g>
+          <animateTransform attributeName="transform" type="translate" values="0,0;0,-3;0,0" dur="3.6s" repeatCount="indefinite"/>
+          <rect x="-100" y="-22" width="200" height="44" rx="9" fill="#0f172a" stroke="#a855f7" stroke-width="1.5" filter="url(#glow)"/>
+          <text x="-78" y="4" font-family="Segoe UI,sans-serif" font-size="13" font-weight="700" fill="#a855f7">🐧 WSL2 / UBUNTU</text>
+          <circle cx="85" cy="0" r="3" fill="#f59e0b">
+            <animate attributeName="opacity" values="1;0.2;1" dur="1.4s" repeatCount="indefinite"/>
+          </circle>
+        </g>
+      </g>
+
+      <!-- Flecha 3 -->
+      <g>
+        <line x1="400" y1="318" x2="400" y2="372" stroke="#a855f7" stroke-width="2" stroke-dasharray="6 6" opacity="0.7" filter="url(#glow)">
+          <animate attributeName="stroke-dashoffset" from="0" to="-24" dur="1.6s" repeatCount="indefinite"/>
+        </line>
+        <polygon points="400,372 395,364 405,364" fill="#a855f7"/>
+        <circle r="3.5" fill="#a855f7" filter="url(#glow)">
+          <animateMotion dur="2.4s" repeatCount="indefinite"><mpath href="#flow3"/></animateMotion>
+        </circle>
+      </g>
+
+      <!-- ===== CAPA 4: HERMES AGENT ===== -->
+      <g transform="translate(400,398)">
+        <ellipse rx="140" ry="40" fill="url(#haloAmber)">
+          <animate attributeName="rx" values="120;155;120" dur="6s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.4;0.85;0.4" dur="6s" repeatCount="indefinite"/>
+        </ellipse>
+        <g>
+          <animateTransform attributeName="transform" type="translate" values="0,0;0,-3;0,0" dur="2.8s" repeatCount="indefinite"/>
+          <rect x="-130" y="-24" width="260" height="48" rx="10" fill="#0f172a" stroke="#f59e0b" stroke-width="1.8" filter="url(#glowStrong)"/>
+          <text x="-95" y="5" font-family="Segoe UI,sans-serif" font-size="14" font-weight="800" fill="#f59e0b">⚡ HERMES AGENT</text>
+          <circle cx="115" cy="0" r="4" fill="#22c55e" filter="url(#glow)">
+            <animate attributeName="opacity" values="1;0.15;1" dur="1.2s" repeatCount="indefinite"/>
+          </circle>
+        </g>
+        <!-- anillos orbitando Hermes -->
+        <g>
+          <ellipse rx="150" ry="30" fill="none" stroke="#00d4ff" stroke-width="0.8" stroke-dasharray="4 10" opacity="0.6">
+            <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="18s" repeatCount="indefinite"/>
+          </ellipse>
+        </g>
+      </g>
+
+      <!-- PATH LATERAL ACP con paquetes -->
+      <g>
+        <path d="M 500 180 Q 640 180 640 240 Q 640 290 500 290" fill="none" stroke="#00d4ff" stroke-width="1.2" stroke-dasharray="5 7" opacity="0.55" filter="url(#glow)">
+          <animate attributeName="stroke-dashoffset" from="0" to="-24" dur="2s" repeatCount="indefinite"/>
+        </path>
+        <text x="655" y="238" font-family="Consolas,monospace" font-size="10" fill="#00d4ff" opacity="0.9">
+          ACP
+          <animate attributeName="opacity" values="0.4;1;0.4" dur="2.3s" repeatCount="indefinite"/>
+        </text>
+        <circle r="3" fill="#00d4ff" filter="url(#glow)">
+          <animateMotion dur="3.4s" repeatCount="indefinite"><mpath href="#acpPath"/></animateMotion>
+        </circle>
+        <circle r="2" fill="#22c55e">
+          <animateMotion dur="4s" begin="1s" repeatCount="indefinite"><mpath href="#acpPath"/></animateMotion>
+        </circle>
+      </g>
+
+      <!-- ETIQUETAS DE ESTADO ALTERNAS -->
+      <g transform="translate(60,430)">
+        <text font-family="Consolas,monospace" font-size="11" fill="#22c55e">
+          <animate attributeName="opacity" values="1;0;0;1" dur="6s" repeatCount="indefinite"/>
+          ✓ hermes acp --check OK
+        </text>
+        <text font-family="Consolas,monospace" font-size="11" fill="#00d4ff" opacity="0">
+          <animate attributeName="opacity" values="0;1;0;0" dur="6s" repeatCount="indefinite"/>
+          ✓ WSL2 conectado
+        </text>
+        <text font-family="Consolas,monospace" font-size="11" fill="#a855f7" opacity="0">
+          <animate attributeName="opacity" values="0;0;1;0" dur="6s" repeatCount="indefinite"/>
+          ✓ ACP Client activo
+        </text>
+      </g>
+
+      <!-- FIRMA -->
+      <text x="740" y="435" text-anchor="end" font-family="Segoe UI,sans-serif" font-size="10" fill="#94a3b8" font-style="italic">
+        Rubén Sbarsky
+        <animate attributeName="opacity" values="0.35;0.95;0.35" dur="7s" repeatCount="indefinite"/>
+      </text>
+
+      <!-- PARTÍCULAS ORBITALES -->
+      <g>
+        <circle cx="400" cy="225" r="2" fill="#00d4ff" filter="url(#glow)">
+          <animateTransform attributeName="transform" type="rotate" from="0 400 225" to="360 400 225" dur="14s" repeatCount="indefinite"/>
+          <animate attributeName="cx" values="400;560;400" dur="14s" repeatCount="indefinite"/>
+        </circle>
+      </g>
+    </svg>
+  </div>
+
+  <span class="badge">Tutorial Técnico · Integración de Agentes IA</span>
+  <h1>Usar Hermes Agent instalado en WSL2 desde VS Code</h1>
+  <p style="color:var(--muted);font-size:1.05rem;max-width:820px">
+    Guía completa para conectar Visual Studio Code (Windows 11) con el <strong>Hermes Agent</strong> que ya tienes instalado en WSL2/Ubuntu, utilizando el protocolo <strong>ACP (Agent Client Protocol)</strong>. Sin reinstalar, sin duplicar configuración, reutilizando exactamente el mismo agente.
+  </p>
+
+  <div class="quote">
+    "Si no puedes explicarlo de forma sencilla, es que no lo entiendes lo suficientemente bien."
+  </div>
+
+  <div class="metrics">
+    <div class="metric"><span class="metric-value">16</span><span class="metric-label">Pasos</span></div>
+    <div class="metric"><span class="metric-value">4</span><span class="metric-label">Problemas resueltos</span></div>
+    <div class="metric"><span class="metric-value">3</span><span class="metric-label">Fuentes oficiales</span></div>
+    <div class="metric"><span class="metric-value">1</span><span class="metric-label">Solo Agente</span></div>
+  </div>
+
+  <div class="card card-accent">
+    <h3>🎯 Objetivo del tutorial</h3>
+    <p>Tenemos la siguiente arquitectura de partida:</p>
+    <div class="diagram">Windows 11
+    │
+    ├── VS Code
+    │
+    └── WSL2 / Ubuntu
+            │
+            └── Hermes Agent</div>
+    <p style="margin-top:12px">Queremos que <strong>VS Code</strong> utilice el <strong>Hermes Agent</strong> que <strong>YA</strong> tenemos instalado en WSL2.</p>
+    <p><strong>No</strong> vamos a instalar Hermes otra vez en Windows. La comunicación se hará mediante <strong>ACP (Agent Client Protocol)</strong>.</p>
+  </div>
+
+  <div class="card card-purple">
+    <h3>🧭 Cómo navegar este tutorial</h3>
+    <ul>
+      <li><strong>Verificación:</strong> comprobar que Hermes y ACP funcionan en WSL.</li>
+      <li><strong>VS Code + WSL:</strong> preparar VS Code para trabajar dentro del entorno Linux.</li>
+      <li><strong>Config ACP:</strong> registrar el agente Hermes en ACP Client.</li>
+      <li><strong>Pruebas:</strong> validar conversación, archivos, terminal y proyectos reales.</li>
+      <li><strong>Arquitectura / Advertencias / Problemas:</strong> consolidar y evitar errores.</li>
+      <li><strong>Fuentes y Créditos:</strong> referencias oficiales y datos del autor.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ VERIFICACIÓN ============ -->
+<section id="verificacion">
+  <h2>🔍 Verificación previa en WSL</h2>
+  <p>Antes de tocar VS Code, hay que confirmar que Hermes y su soporte ACP funcionan correctamente <strong>dentro de WSL2</strong>.</p>
+
+  <div class="step">
+    <div class="step-title"><span class="step-num">1</span><h3>Comprobar que Hermes funciona en WSL</h3></div>
+    <p><strong>Acción:</strong> abre Ubuntu/WSL y ejecuta:</p>
+    <pre><button class="copy-btn">Copiar</button><code>hermes --version</code></pre>
+    <div class="callout example">
+      <div class="callout-title">Prueba</div>
+      Debe aparecer la versión instalada de Hermes.
+    </div>
+    <div class="callout warn">
+      <div class="callout-title">Importante</div>
+      Si aparece <code class="inline">command not found</code>, <strong>NO continúes</strong>. Primero hay que solucionar la instalación de Hermes.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-title"><span class="step-num">2</span><h3>Comprobar ACP</h3></div>
+    <p>En la misma terminal WSL ejecuta:</p>
+    <pre><button class="copy-btn">Copiar</button><code>hermes acp --version</code></pre>
+    <p>Después:</p>
+    <pre><button class="copy-btn">Copiar</button><code>hermes acp --check</code></pre>
+    <div class="callout example">
+      <div class="callout-title">Prueba</div>
+      Si ACP está correctamente instalado, la comprobación debe terminar sin errores importantes.
+    </div>
+    <div class="callout warn">
+      <div class="callout-title">Importante</div>
+      No ejecutes todavía <code class="inline">hermes acp</code> y lo dejes funcionando. Ese comando inicia el servidor ACP y queda esperando que un cliente, como VS Code, se conecte.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-title"><span class="step-num">3</span><h3>Si ACP no está instalado</h3></div>
+    <p>Solo haz este paso <strong>SI</strong> el Paso 2 indica que falta el soporte ACP. Primero localiza la instalación de Hermes:</p>
+    <pre><button class="copy-btn">Copiar</button><code>cd ~/.hermes/hermes-agent</code></pre>
+    <p>Después instala el extra ACP:</p>
+    <pre><button class="copy-btn">Copiar</button><code>uv pip install -e '.[acp]'</code></pre>
+    <p>Cuando termine:</p>
+    <pre><button class="copy-btn">Copiar</button><code>hermes acp --check</code></pre>
+    <div class="callout example">
+      <div class="callout-title">Prueba</div>
+      La comprobación debe ejecutarse sin errores.
+    </div>
+    <div class="callout warn">
+      <div class="callout-title">Importante</div>
+      Si el Paso 2 ya funcionaba correctamente, <strong>NO ejecutes este paso</strong>.
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONEXIÓN WSL ============ -->
+<section id="conexion">
+  <h2>🔗 VS Code conectado a WSL</h2>
+
+  <div class="step">
+    <div class="step-title"><span class="step-num">4</span><h3>Comprobar que VS Code puede trabajar con WSL</h3></div>
+    <p>En Windows abre VS Code. Instala la extensión:</p>
+    <p><span class="chip">WSL</span> de Microsoft.</p>
+    <p>Después pulsa:</p>
+    <pre><button class="copy-btn">Copiar</button><code>Ctrl + Shift + P</code></pre>
+    <p>Escribe:</p>
+    <pre><button class="copy-btn">Copiar</button><code>WSL: Connect to WSL</code></pre>
+    <p>Selecciona tu distribución Ubuntu. VS Code se volverá a abrir conectado a WSL.</p>
+    <div class="callout example">
+      <div class="callout-title">Prueba</div>
+      En VS Code abre <strong>Terminal → New Terminal</strong>. La terminal debe ser una terminal Linux/WSL. Ejecuta:
+      <pre style="margin-top:8px"><code>which hermes</code></pre>
+      Debe aparecer la ruta del ejecutable de Hermes. Por ejemplo:
+      <pre style="margin-top:8px"><code>/home/rubenurbano/.local/bin/hermes</code></pre>
+      La ruta exacta puede ser diferente.
+    </div>
+    <div class="callout warn">
+      <div class="callout-title">Importante</div>
+      No copies esa ruta como si fuera obligatoriamente la tuya. Usa la ruta que devuelva <code class="inline">which hermes</code>.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-title"><span class="step-num">5</span><h3>Instalar ACP Client en VS Code</h3></div>
+    <p>En VS Code pulsa:</p>
+    <pre><button class="copy-btn">Copiar</button><code>Ctrl + Shift + X</code></pre>
+    <p>Busca:</p>
+    <pre><button class="copy-btn">Copiar</button><code>ACP Client</code></pre>
+    <p>Instala la extensión <strong>ACP Client</strong>.</p>
+    <div class="callout warn">
+      <div class="callout-title">Importante</div>
+      La documentación actual de Hermes indica utilizar <strong>ACP Client</strong> para conectar Hermes con VS Code.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-title"><span class="step-num">6</span><h3>Configurar Hermes en ACP Client</h3></div>
+    <p>La documentación oficial de Hermes indica esta configuración:</p>
+    <pre><button class="copy-btn">Copiar</button><code>{
+  "acp.agents": {
+    "Hermes Agent": {
+      "command": "hermes",
+      "args": ["acp"]
+    }
+  }
+}</code></pre>
+    <p>Como estamos trabajando dentro de WSL, el objetivo es que ese comando:</p>
+    <pre><button class="copy-btn">Copiar</button><code>hermes acp</code></pre>
+    <p>se ejecute dentro del entorno WSL donde Hermes ya está instalado.</p>
+  </div>
+</section>
+
+<!-- ============ CONFIG ACP ============ -->
+<section id="config">
+  <h2>⚙️ Configuración ACP en VS Code</h2>
+
+  <div class="step">
+    <div class="step-title"><span class="step-num">7</span><h3>Abrir la configuración JSON de VS Code</h3></div>
+    <p>En VS Code pulsa:</p>
+    <pre><button class="copy-btn">Copiar</button><code>Ctrl + Shift + P</code></pre>
+    <p>Escribe:</p>
+    <pre><button class="copy-btn">Copiar</button><code>Preferences: Open User Settings (JSON)</code></pre>
+    <p>Abre el archivo JSON. <strong>NO borres</strong> las configuraciones que ya tengas. Añade la configuración de Hermes dentro del objeto JSON existente.</p>
+    <p>Debe quedar conceptualmente así:</p>
+    <pre><button class="copy-btn">Copiar</button><code>{
+  "acp.agents": {
+    "Hermes Agent": {
+      "command": "hermes",
+      "args": ["acp"]
+    }
+  }
+}</code></pre>
+    <div class="callout info">
+      <div class="callout-title">Info</div>
+      Si tu archivo ya contiene otras configuraciones, simplemente añade la propiedad <code class="inline">"acp.agents"</code> respetando las comas del JSON.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-title"><span class="step-num">8</span><h3>Importante: ejecutar VS Code conectado a WSL</h3></div>
+    <p>Este paso es importante. Para nuestra instalación <strong>NO</strong> queremos que Windows intente ejecutar:</p>
+    <pre><button class="copy-btn">Copiar</button><code>hermes</code></pre>
+    <p>como un programa Windows. Queremos:</p>
+    <div class="diagram">VS Code
+   ↓
+WSL
+   ↓
+hermes acp
+   ↓
+Hermes Agent</div>
+    <p style="margin-top:12px">Por eso debes trabajar con VS Code conectado a WSL mediante:</p>
+    <pre><button class="copy-btn">Copiar</button><code>WSL: Connect to WSL</code></pre>
+  </div>
+
+  <div class="step">
+    <div class="step-title"><span class="step-num">9</span><h3>Abrir ACP Client</h3></div>
+    <p>En VS Code busca el panel de ACP Client. Si aparece en la barra lateral, ábrelo. Debería aparecer <strong>Hermes Agent</strong> como agente disponible.</p>
+    <p>Selecciona:</p>
+    <pre><button class="copy-btn">Copiar</button><code>Hermes Agent</code></pre>
+    <p>Pulsa:</p>
+    <pre><button class="copy-btn">Copiar</button><code>Connect</code></pre>
+  </div>
+</section>
+
+<!-- ============ PRUEBAS ============ -->
+<section id="pruebas">
+  <h2>🧪 Pruebas funcionales</h2>
+
+  <div class="step">
+    <div class="step-title"><span class="step-num">10</span><h3>Primera prueba</h3></div>
+    <p>Cuando Hermes esté conectado, escribe algo MUY sencillo:</p>
+    <div class="callout info">
+      <div class="callout-title">Mensaje de prueba</div>
+      Hola Hermes. Responde únicamente: <em>"Hermes está funcionando dentro de VS Code."</em>
+    </div>
+    <div class="callout example">
+      <div class="callout-title">Prueba</div>
+      Debe responder Hermes dentro del panel ACP de VS Code.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-title"><span class="step-num">11</span><h3>Comprobar que Hermes puede trabajar con archivos</h3></div>
+    <p>Ahora vamos a comprobar que no solamente conversa. Crea en el proyecto abierto un archivo:</p>
+    <pre><button class="copy-btn">Copiar</button><code>prueba-hermes.txt</code></pre>
+    <p>Escribe dentro:</p>
+    <pre><button class="copy-btn">Copiar</button><code>Este archivo ha sido creado para probar Hermes Agent.</code></pre>
+    <p>Después pídele a Hermes:</p>
+    <div class="callout info">
+      <div class="callout-title">Petición</div>
+      Lee el archivo prueba-hermes.txt y dime exactamente qué contiene.
+    </div>
+    <div class="callout example">
+      <div class="callout-title">Prueba</div>
+      Hermes debería utilizar sus herramientas de archivos y mostrarte el contenido.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-title"><span class="step-num">12</span><h3>Comprobar una modificación</h3></div>
+    <p>Ahora pídele:</p>
+    <div class="callout info">
+      <div class="callout-title">Petición</div>
+      Modifica prueba-hermes.txt y añade al final esta línea:<br>
+      <em>"Modificado por Hermes Agent desde VS Code."</em>
+    </div>
+    <div class="callout example">
+      <div class="callout-title">Prueba</div>
+      Comprueba físicamente el archivo. Debe contener las dos líneas.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-title"><span class="step-num">13</span><h3>Comprobar el terminal</h3></div>
+    <p>Pídele:</p>
+    <div class="callout info">
+      <div class="callout-title">Petición</div>
+      Ejecuta en el terminal el comando: <code class="inline">pwd</code>
+    </div>
+    <div class="callout example">
+      <div class="callout-title">Prueba</div>
+      Hermes debería ejecutar el comando mediante su herramienta de terminal y mostrar el resultado.
+    </div>
+    <div class="callout warn">
+      <div class="callout-title">Importante</div>
+      Como Hermes está funcionando dentro de WSL, el entorno de ejecución será Linux/WSL.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-title"><span class="step-num">14</span><h3>Comprobar el proyecto real</h3></div>
+    <p>Ahora abre en VS Code uno de tus proyectos reales. Por ejemplo:</p>
+    <pre><button class="copy-btn">Copiar</button><code>~/proyectos/mi-proyecto</code></pre>
+    <p>o el directorio que corresponda. Pídele a Hermes:</p>
+    <div class="callout info">
+      <div class="callout-title">Petición</div>
+      Analiza la estructura de este proyecto.<br><br>
+      No modifiques ningún archivo.<br><br>
+      Dime:<br>
+      1. qué tipo de proyecto es<br>
+      2. qué archivos principales contiene<br>
+      3. qué tecnologías utiliza<br>
+      4. cuál parece ser el archivo principal<br>
+      5. qué mejoras detectarías
+    </div>
+    <div class="callout example">
+      <div class="callout-title">Prueba</div>
+      Hermes debe analizar el proyecto sin modificarlo.
+    </div>
+  </div>
+</section>
+
+<!-- ============ ARQUITECTURA ============ -->
+<section id="arquitectura">
+  <h2>🏗️ Entender qué hemos conseguido</h2>
+
+  <div class="step">
+    <div class="step-title"><span class="step-num">15</span><h3>La configuración final</h3></div>
+    <div class="diagram">WINDOWS 11
+      │
+      ▼
+   VS CODE
+      │
+      │ ACP
+      ▼
+   WSL2
+      │
+      ▼
+hermes acp
+      │
+      ▼
+HERMES AGENT
+      │
+      ├── archivos
+      ├── terminal
+      ├── herramientas
+      ├── memoria
+      ├── skills
+      ├── navegador
+      └── modelos</div>
+    <div class="callout example" style="margin-top:14px">
+      <div class="callout-title">Ventaja fundamental</div>
+      NO estamos creando otro Hermes. Estamos utilizando: <strong>EL MISMO HERMES QUE YA TIENES EN WSL</strong>.
+    </div>
+  </div>
+
+  <div class="card card-green">
+    <h3>🎁 Resultado final</h3>
+    <p>Cuando todo funcione tendrás:</p>
+    <div class="diagram">VS Code
+    │
+    ├── edición de código
+    ├── archivos
+    ├── terminal
+    ├── Git
+    └── ACP Client
+             │
+             ▼
+         Hermes Agent
+             │
+             ▼
+            WSL2</div>
+    <p style="margin-top:12px">Y podrás utilizar <strong>Hermes como agente de programación desde VS Code</strong>, manteniendo la instalación y configuración de Hermes que ya tienes en WSL.</p>
+  </div>
+
+  <div class="callout info">
+    <div class="callout-title">Nota importante</div>
+    La documentación oficial actual de Hermes confirma que <code class="inline">hermes acp</code> es el servidor ACP para integración con IDEs y que VS Code puede conectarse mediante <strong>ACP Client</strong>.
+  </div>
+</section>
+
+<!-- ============ ADVERTENCIAS ============ -->
+<section id="advertencias">
+  <h2>⛔ No tocar esto</h2>
+  <p>Paso 16 — Cosas que <strong>NO</strong> debes hacer inicialmente.</p>
+
+  <div class="card card-red">
+    <h3>🚫 Lista de cosas prohibidas al inicio</h3>
+    <ul style="margin-top:8px">
+      <li>No reinstales Hermes en Windows.</li>
+      <li>No copies la instalación de Hermes de WSL a Windows.</li>
+      <li>No cambies de modelo porque sí.</li>
+      <li>No muevas <code class="inline">~/.hermes</code>.</li>
+      <li>No cambies tu configuración actual.</li>
+      <li>No instales cosas adicionales si <code class="inline">hermes acp --check</code> ya funciona.</li>
+      <li>No ejecutes <code class="inline">hermes acp</code> manualmente mientras intentas conectarlo desde ACP Client.</li>
+    </ul>
+  </div>
+
+  <div class="callout warn">
+    <div class="callout-title">Recuerda</div>
+    El objetivo es <strong>reutilizar</strong> el Hermes que ya tienes. Toda acción que duplique, mueva o reinstale puede romper tu entorno actual.
+  </div>
+</section>
+
+<!-- ============ TROUBLESHOOTING ============ -->
+<section id="troubleshooting">
+  <h2>🛠️ Solución de problemas</h2>
+
+  <details open>
+    <summary>Problema 1 — hermes acp --check dice que falta ACP</summary>
+    <div class="details-body">
+      <p><strong>Síntoma:</strong> <code class="inline">hermes acp --check</code> dice que falta ACP.</p>
+      <p><strong>Solución:</strong></p>
+      <pre><button class="copy-btn">Copiar</button><code>cd ~/.hermes/hermes-agent
+
+uv pip install -e '.[acp]'</code></pre>
+      <p>Después:</p>
+      <pre><button class="copy-btn">Copiar</button><code>hermes acp --check</code></pre>
+    </div>
+  </details>
+
+  <details>
+    <summary>Problema 2 — VS Code dice que no encuentra "hermes"</summary>
+    <div class="details-body">
+      <p><strong>Solución:</strong> comprueba desde el terminal WSL de VS Code:</p>
+      <pre><button class="copy-btn">Copiar</button><code>which hermes</code></pre>
+      <p>Si devuelve una ruta, Hermes existe en WSL. Comprueba también:</p>
+      <pre><button class="copy-btn">Copiar</button><code>echo $PATH</code></pre>
+      <p>El problema probablemente será que el proceso de VS Code no está heredando correctamente el PATH de tu shell.</p>
+      <div class="callout warn">
+        <div class="callout-title">Importante</div>
+        NO reinstales Hermes todavía.
+      </div>
+    </div>
+  </details>
+
+  <details>
+    <summary>Problema 3 — ACP Client aparece pero Hermes no conecta</summary>
+    <div class="details-body">
+      <p>PRIMERO comprueba desde la terminal WSL de VS Code:</p>
+      <pre><button class="copy-btn">Copiar</button><code>hermes acp --check</code></pre>
+      <p>Si falla, arregla primero ese problema. Si funciona, vuelve a intentar la conexión desde ACP Client.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Problema 4 — Hermes funciona en terminal Ubuntu normal pero no desde VS Code</summary>
+    <div class="details-body">
+      <p>Comprueba que VS Code está realmente conectado a WSL. En la terminal integrada ejecuta:</p>
+      <pre><button class="copy-btn">Copiar</button><code>uname -a</code></pre>
+      <p>y:</p>
+      <pre><button class="copy-btn">Copiar</button><code>which hermes</code></pre>
+      <p>Si estás dentro de WSL, debería aparecer información de Linux y la ruta Linux de Hermes.</p>
+    </div>
+  </details>
+</section>
+
+<!-- ============ FUENTES ============ -->
+<section id="fuentes">
+  <h2>📚 Fuentes oficiales</h2>
+  <p>Documentación oficial de Hermes Agent utilizada como referencia para este tutorial:</p>
+
+  <div class="source-item">
+    <h4>Hermes Agent — ACP Host Integration</h4>
+    <a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/acp.md" target="_blank" rel="noopener">https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/acp.md</a>
+  </div>
+
+  <div class="source-item">
+    <h4>Hermes Agent — Windows / WSL2</h4>
+    <a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/windows-wsl-quickstart.md" target="_blank" rel="noopener">https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/windows-wsl-quickstart.md</a>
+  </div>
+
+  <div class="source-item">
+    <h4>Hermes Agent — Programmatic Integration</h4>
+    <a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/developer-guide/programmatic-integration.md" target="_blank" rel="noopener">https://github.com/NousResearch/hermes-agent/blob/main/website/docs/developer-guide/programmatic-integration.md</a>
+  </div>
+
+  <div class="callout info">
+    <div class="callout-title">Nota</div>
+    Todos los enlaces corresponden a la documentación oficial del repositorio <strong>NousResearch/hermes-agent</strong>. No se ha añadido información externa al contenido original.
+  </div>
+</section>
+
+<!-- ============ CRÉDITOS ============ -->
+<section id="creditos">
+  <h2>✨ Créditos</h2>
+
+  <div class="svg-wrap">
+    <!-- MISMO SVG QUE HOME: se clona por JS -->
+    <div id="creditsSvgHost"></div>
+  </div>
+
+  <div class="credits-box">
+    <span class="badge">Tutorial Educativo</span>
+    <h3 style="color:var(--text);margin:8px 0 4px">Usar Hermes Agent instalado en WSL2 desde VS Code</h3>
+    <p style="color:var(--muted);font-size:13.5px">Integración mediante ACP (Agent Client Protocol)</p>
+
+    <div class="name">Rubén Sbarsky</div>
+    <div class="role">Autor · Divulgación técnica</div>
+
+    <div class="credits-meta">
+      <div>
+        <div class="k">Fecha</div>
+        <div class="v">18/09/2026</div>
+      </div>
+      <div>
+        <div class="k">Hora</div>
+        <div class="v">06:25:16</div>
+      </div>
+    </div>
+
+    <div class="callout info" style="text-align:left;margin-top:18px">
+      <div class="callout-title">Uso educativo</div>
+      Este tutorial ha sido elaborado únicamente con fines <strong>educativos y de divulgación</strong>. Todo el contenido técnico proviene de la documentación oficial de Hermes Agent y de la experiencia de integración con WSL2 y VS Code.
+    </div>
+
+    <p class="footer-fiat" style="margin-top:18px;font-size:15px">Fiat iustitia, ruat caelum.</p>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <p>📚 Tutorial solo con fines Educativos y Divulgación</p>
+  <p class="footer-credits">👨‍💻 Créditos: Rubén Sbarsky</p>
+  <p>📅 FECHA: 18/09/2026</p>
+  <p>Hora: 06:25:16</p>
+  <p class="footer-fiat">Fiat iustitia, ruat caelum.</p>
+</footer>
+
+<button id="backTop" aria-label="Volver arriba">↑</button>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ========== NAVEGACIÓN SPA ========== */
+  const navButtons = document.querySelectorAll('.nav-btn');
+  const sections = document.querySelectorAll('section');
+
+  function showSection(id){
+    sections.forEach(s => s.classList.toggle('active', s.id === id));
+    navButtons.forEach(b => b.classList.toggle('active', b.dataset.target === id));
+    window.scrollTo({top:0, behavior:'smooth'});
+    // Reiniciar SVG en créditos
+    if(id === 'creditos'){
+      restartCreditsSvg();
+    }
+    // actualizar progreso tras cambio
+    updateProgress();
+  }
+
+  navButtons.forEach(btn => {
+    btn.addEventListener('click', () => showSection(btn.dataset.target));
+  });
+
+  /* ========== BARRA DE PROGRESO ========== */
+  const progressBar = document.getElementById('progressBar');
+  function updateProgress(){
+    const h = document.documentElement;
+    const scrolled = h.scrollTop;
+    const total = h.scrollHeight - h.clientHeight;
+    const pct = total > 0 ? (scrolled / total) * 100 : 0;
+    progressBar.style.width = pct + '%';
+  }
+  window.addEventListener('scroll', updateProgress, {passive:true});
+  window.addEventListener('resize', updateProgress);
+
+  /* ========== BACK TO TOP ========== */
+  const backTop = document.getElementById('backTop');
+  window.addEventListener('scroll', () => {
+    backTop.classList.toggle('show', window.scrollY > 400);
+  }, {passive:true});
+  backTop.addEventListener('click', () => window.scrollTo({top:0, behavior:'smooth'}));
+
+  /* ========== COPIAR CÓDIGO ========== */
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pre = btn.closest('pre');
+      const code = pre ? pre.querySelector('code') : null;
+      if(!code) return;
+      const text = code.innerText;
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(() => {
+          btn.textContent = '✓ Copiado';
+          btn.classList.add('copied');
+          setTimeout(() => {
+            btn.textContent = 'Copiar';
+            btn.classList.remove('copied');
+          }, 1600);
+        }).catch(() => fallbackCopy(text, btn));
+      } else {
+        fallbackCopy(text, btn);
+      }
+    });
+  });
+  function fallbackCopy(text, btn){
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try{ document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta);
+    btn.textContent = '✓ Copiado';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copiar';
+      btn.classList.remove('copied');
+    }, 1600);
+  }
+
+  /* ========== CLONAR SVG A CRÉDITOS ========== */
+  const heroSvg = document.getElementById('heroSvg');
+  const creditsHost = document.getElementById('creditsSvgHost');
+  let creditsClone = null;
+
+  function buildCreditsSvg(){
+    if(!heroSvg || !creditsHost) return;
+    if(creditsClone) return;
+    creditsClone = heroSvg.cloneNode(true);
+    creditsClone.removeAttribute('id');
+    creditsClone.setAttribute('aria-hidden','true');
+    creditsHost.appendChild(creditsClone);
+  }
+
+  function restartCreditsSvg(){
+    buildCreditsSvg();
+    if(!creditsClone) return;
+    // Reiniciar todas las animaciones SVG mediante setCurrentTime(0)
+    try{
+      const svg = creditsClone;
+      if(typeof svg.setCurrentTime === 'function'){
+        svg.setCurrentTime(0);
+      }
+      const anims = svg.querySelectorAll('animate, animateTransform, animateMotion');
+      anims.forEach(a => {
+        try{
+          if(typeof a.beginElement === 'function') a.beginElement();
+        }catch(e){}
+      });
+    }catch(e){}
+  }
+
+  // Construir el clon inicialmente (oculto)
+  buildCreditsSvg();
+
+  /* ========== INICIALIZAR ========== */
+  updateProgress();
+})();
+</script>
+
+</body>
+</html>
